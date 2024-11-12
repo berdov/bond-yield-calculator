@@ -1,20 +1,15 @@
 from datetime import datetime
 
-# Сохраняем оригинальную функцию print
 original_print = print
-
-# Переопределяем print для форматирования чисел типа float
 def custom_print(*args, **kwargs):
     formatted_args = [
         f"{arg:.2f}" if isinstance(arg, float) else arg for arg in args
     ]
     original_print(*formatted_args, **kwargs)
 
-# Подменяем стандартную функцию print на custom_print
 print = custom_print
 
 def no_reinvest(balance, price, date1, date2, velichina_coupona, coupons):
-    print(balance, price, date1, date2, velichina_coupona, coupons)
     start_balance = balance
     difference = date1 - date2
     dni = difference.days
@@ -106,6 +101,8 @@ balance = float(input())
 date2 = datetime.now()
 print("купоны реинвестируем? (да/нет/не знаю)")
 what = input()
+print("")
+print("")
 if what == "да":
     print("случай 2. Купоны реинвестируются)")
     linear_reinvest(balance, price, date1, date2, velichina_coupona, coupons)
