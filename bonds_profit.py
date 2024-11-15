@@ -1,4 +1,5 @@
 from datetime import datetime
+from prettytable import PrettyTable
 
 # Сохраняем оригинальную функцию print
 original_print = print
@@ -13,120 +14,89 @@ def custom_print(*args, **kwargs):
 # Подменяем стандартную функцию print на custom_print
 print = custom_print
 
-def no_reinvest(balance, price, date1, date2, velichina_coupona, coupons, nalog):
+def calculate_bond_investment(balance, price, date1, date2, coupon_value, coupons, tax_rate, reinvest):
     start_balance = balance
-    difference = date1 - date2
-    dni = difference.days
-    frac = dni / 365
-    amount_of_coupons = frac * coupons
-    price_increase = (1000 - price) / amount_of_coupons
-    amount_of_bonds = int(balance / (current_coupon + price))
-    print("бумаг куплено", amount_of_bonds)
-    balance -= amount_of_bonds * (price + current_coupon)
-    print("текущий остаток кошелька", format(balance, '.2f'))
-    for i in range(1, int(amount_of_coupons) + 2):
-        print("номер купона", i)
-        if i == int(amount_of_coupons) + 1:
+    days = (date1 - date2).days
+    frac = days / 365
+    num_coupons = int(frac * coupons)
+    price_increment = (1000 - price) / num_coupons
+
+    bonds = int(balance / (price + current_coupon))
+    balance -= bonds * (price + current_coupon)
+
+    # Таблица для отображения результатов
+    table = PrettyTable()
+    table.field_names = ["Купон №", "Цена бумаги", "Остаток баланса", "Количество бумаг", "Оценочная стоимость"]
+
+    for i in range(1, num_coupons + 2):
+        if i == num_coupons + 1:
             price = 1000
-        elif i == 1:
-            price = 1000 - price_increase * int(amount_of_coupons)
-        else:
-            price += price_increase
-        balance += (velichina_coupona * amount_of_bonds)
-        skolko_dokupim = int(balance / price)
-        print("текущая примерная стоимость бумаги", price)
-        print("текущий остаток кошелька", format(balance, '.2f'))
-        print("текущая оценочная стоимость", price * amount_of_bonds + balance)
-    result_of_investment = price * amount_of_bonds + balance
-    print("ИТОГИ")
-    print("баланс составил", result_of_investment)
-    print("доход за все время составит ", (result_of_investment / start_balance - 1) * 100, "%")
-    print("процентов годовых", ((result_of_investment / start_balance) ** (1 / frac) - 1) * 100, "%")
-    print("ВЫЧТЕМ ПОДОХОДНЫЙ НАЛОГ")
-    after_nalog = result_of_investment - (result_of_investment - start_balance) * nalog
-    print("баланс состаит", after_nalog)
-    print("доход за все время составит ", ((after_nalog) / start_balance - 1) * 100, "%")
-    print("процентов годовых", ((after_nalog / start_balance) ** (1 / frac) - 1) * 100, "%")
+        elif i > 1:
+            price += price_increment
 
-def linear_reinvest(balance, price, date1, date2, velichina_coupona, coupons, nalog):
-    start_balance = balance
-    difference = date1 - date2
-    dni = difference.days
-    frac = dni / 365
-    amount_of_coupons = frac * coupons
-    price_increase = (1000 - price)/amount_of_coupons
-    amount_of_bonds = int(balance/(current_coupon+price))
-    print("бумаг куплено", amount_of_bonds)
-    balance -= amount_of_bonds*(price+current_coupon)
-    print("текущий остаток кошелька", balance)
-    for i in range(1, int(amount_of_coupons)+2):
-        print("номер купона", i)
-        if i == int(amount_of_coupons)+1:
-            price = 1000
-        elif i == 1:
-            price = 1000 - price_increase*int(amount_of_coupons)
-        else:
-            price += price_increase
-        balance += (velichina_coupona*amount_of_bonds)
-        skolko_dokupim = int(balance/price)
-        amount_of_bonds += skolko_dokupim
-        balance -= (skolko_dokupim*price)
-        print("сколько стало бумаг", amount_of_bonds)
-        print("текущая примерная стоимость бумаги", price)
-        print("текущий остаток кошелька", balance)
-        print("текущая оценочная стоимость", price*amount_of_bonds + balance)
-    result_of_investment = price*amount_of_bonds + balance
-    print("ИТОГИ")
-    print("баланс составил", result_of_investment)
-    print("доход за все время составит ", (result_of_investment / start_balance - 1) * 100, "%")
-    print("процентов годовых", ((result_of_investment / start_balance) ** (1 / frac) - 1) * 100, "%")
-    print("ВЫЧТЕМ ПОДОХОДНЫЙ НАЛОГ")
-    after_nalog = result_of_investment - (result_of_investment - start_balance)*nalog
-    print("баланс состаит", after_nalog)
-    print("доход за все время составит ", ((after_nalog) / start_balance - 1) * 100, "%")
-    print("процентов годовых", ((after_nalog / start_balance) ** (1 / frac) - 1) * 100, "%")
+        balance += coupon_value * bonds
+
+        if reinvest:
+            additional_bonds = int(balance / price)
+            bonds += additional_bonds
+            balance -= additional_bonds * price
+
+        table.add_row([i, price, balance, bonds, bonds * price + balance])
+
+    final_value = bonds * price + balance
+    profit = (final_value / start_balance - 1) * 100
+    annualized_return = ((final_value / start_balance) ** (1 / frac) - 1) * 100
+
+    # Вывод таблицы
+    print(table)
+
+    # Итоги
+    print("ИТОГИ:")
+    print("Баланс составил:", final_value)
+    print("Доход за всё время:", profit, "%")
+    print("Процентов годовых:", annualized_return, "%")
+
+    # Учёт налога
+    after_tax = final_value - (final_value - start_balance) * tax_rate
+    tax_profit = (after_tax / start_balance - 1) * 100
+    tax_annualized_return = ((after_tax / start_balance) ** (1 / frac) - 1) * 100
+
+    print("После вычета налога:")
+    print("Баланс составил:", after_tax)
+    print("Доход за всё время:", tax_profit, "%")
+    print("Процентов годовых:", tax_annualized_return, "%")
 
 
-
-#print(format(a, '.2f'))
-#самописка чтобы считать доходность облигации в процентах годовых при условии что купоны не реинвестируются
-print("сколько стоит бумага сейчас")
+# Ввод данных
+print("Сколько стоит бумага сейчас:")
 price = float(input())
-print("накопленный купонный доход")
+print("Накопленный купонный доход:")
 current_coupon = float(input())
-print("дата погашения формат: DD.MM.YYYY")
+print("Дата погашения (формат: DD.MM.YYYY):")
 date1 = datetime.strptime(input(), "%d.%m.%Y")
-print("число купонов в год")
-coupons = (float(input()))
-print("величина купона")
-velichina_coupona = float(input())
-print("какую сумму будем инвестировать")
+print("Число купонов в год:")
+coupons = float(input())
+print("Величина купона:")
+coupon_value = float(input())
+print("Какую сумму будем инвестировать:")
 balance = float(input())
-print("введите НДФЛ в процентах")
-nalog = int(input())
-nalog = nalog / 100
+print("Введите НДФЛ в процентах:")
+tax_rate = float(input()) / 100
 date2 = datetime.now()
-print("купоны реинвестируем? (да/нет/не знаю)")
-what = input()
-if what == "да":
-    print("случай 2. Купоны реинвестируются)")
-    linear_reinvest(balance, price, date1, date2, velichina_coupona, coupons, nalog)
-elif what == "нет":
-    print("случай 1. Купоны не реинвестируются")
-    no_reinvest(balance, price, date1, date2, velichina_coupona, coupons, nalog)
-elif what == "не знаю":
-    print("случай 1. Купоны не реинвестируются")
-    no_reinvest(balance, price, date1, date2, velichina_coupona, coupons, nalog)
-    print("")
-    print("")
-    print("случай 2. Купоны реинвестируются")
-    linear_reinvest(balance, price, date1, date2, velichina_coupona, coupons, nalog)
-print("всё!")
+print("Купоны реинвестируем? (да/нет/не знаю):")
+reinvest_choice = input()
 
+# Обработка выбора
+if reinvest_choice == "да":
+    print("Случай 2. Купоны реинвестируются.")
+    calculate_bond_investment(balance, price, date1, date2, coupon_value, coupons, tax_rate, reinvest=True)
+elif reinvest_choice == "нет":
+    print("Случай 1. Купоны не реинвестируются.")
+    calculate_bond_investment(balance, price, date1, date2, coupon_value, coupons, tax_rate, reinvest=False)
+elif reinvest_choice == "не знаю":
+    print("Случай 1. Купоны не реинвестируются.")
+    calculate_bond_investment(balance, price, date1, date2, coupon_value, coupons, tax_rate, reinvest=False)
+    print("\nСлучай 2. Купоны реинвестируются.")
+    calculate_bond_investment(balance, price, date1, date2, coupon_value, coupons, tax_rate, reinvest=True)
 
-
-
-
-
-
-
+print("Всё!")
