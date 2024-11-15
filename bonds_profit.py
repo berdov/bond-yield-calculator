@@ -1,15 +1,19 @@
 from datetime import datetime
 
+# Сохраняем оригинальную функцию print
 original_print = print
+
+# Переопределяем print для форматирования чисел типа float
 def custom_print(*args, **kwargs):
     formatted_args = [
         f"{arg:.2f}" if isinstance(arg, float) else arg for arg in args
     ]
     original_print(*formatted_args, **kwargs)
 
+# Подменяем стандартную функцию print на custom_print
 print = custom_print
 
-def no_reinvest(balance, price, date1, date2, velichina_coupona, coupons):
+def no_reinvest(balance, price, date1, date2, velichina_coupona, coupons, nalog):
     start_balance = balance
     difference = date1 - date2
     dni = difference.days
@@ -39,12 +43,12 @@ def no_reinvest(balance, price, date1, date2, velichina_coupona, coupons):
     print("доход за все время составит ", (result_of_investment / start_balance - 1) * 100, "%")
     print("процентов годовых", ((result_of_investment / start_balance) ** (1 / frac) - 1) * 100, "%")
     print("ВЫЧТЕМ ПОДОХОДНЫЙ НАЛОГ")
-    after_nalog = result_of_investment - (result_of_investment - start_balance) * 0.13
+    after_nalog = result_of_investment - (result_of_investment - start_balance) * nalog
     print("баланс состаит", after_nalog)
     print("доход за все время составит ", ((after_nalog) / start_balance - 1) * 100, "%")
     print("процентов годовых", ((after_nalog / start_balance) ** (1 / frac) - 1) * 100, "%")
 
-def linear_reinvest(balance, price, date1, date2, velichina_coupona, coupons):
+def linear_reinvest(balance, price, date1, date2, velichina_coupona, coupons, nalog):
     start_balance = balance
     difference = date1 - date2
     dni = difference.days
@@ -77,7 +81,7 @@ def linear_reinvest(balance, price, date1, date2, velichina_coupona, coupons):
     print("доход за все время составит ", (result_of_investment / start_balance - 1) * 100, "%")
     print("процентов годовых", ((result_of_investment / start_balance) ** (1 / frac) - 1) * 100, "%")
     print("ВЫЧТЕМ ПОДОХОДНЫЙ НАЛОГ")
-    after_nalog = result_of_investment - (result_of_investment - start_balance)*0.13
+    after_nalog = result_of_investment - (result_of_investment - start_balance)*nalog
     print("баланс состаит", after_nalog)
     print("доход за все время составит ", ((after_nalog) / start_balance - 1) * 100, "%")
     print("процентов годовых", ((after_nalog / start_balance) ** (1 / frac) - 1) * 100, "%")
@@ -98,24 +102,25 @@ print("величина купона")
 velichina_coupona = float(input())
 print("какую сумму будем инвестировать")
 balance = float(input())
+print("введите НДФЛ в процентах")
+nalog = int(input())
+nalog = nalog / 100
 date2 = datetime.now()
 print("купоны реинвестируем? (да/нет/не знаю)")
 what = input()
-print("")
-print("")
 if what == "да":
     print("случай 2. Купоны реинвестируются)")
-    linear_reinvest(balance, price, date1, date2, velichina_coupona, coupons)
+    linear_reinvest(balance, price, date1, date2, velichina_coupona, coupons, nalog)
 elif what == "нет":
     print("случай 1. Купоны не реинвестируются")
-    no_reinvest(balance, price, date1, date2, velichina_coupona, coupons)
+    no_reinvest(balance, price, date1, date2, velichina_coupona, coupons, nalog)
 elif what == "не знаю":
     print("случай 1. Купоны не реинвестируются")
-    no_reinvest(balance, price, date1, date2, velichina_coupona, coupons)
+    no_reinvest(balance, price, date1, date2, velichina_coupona, coupons, nalog)
     print("")
     print("")
     print("случай 2. Купоны реинвестируются")
-    linear_reinvest(balance, price, date1, date2, velichina_coupona, coupons)
+    linear_reinvest(balance, price, date1, date2, velichina_coupona, coupons, nalog)
 print("всё!")
 
 
