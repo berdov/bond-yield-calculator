@@ -23,6 +23,7 @@ def print_table(table):
     print(table)
 
 def no_reinvest(balance, price, date1, date2, velichina_coupona, coupons, nalog, comission):
+    result_comission = 0
     table = create_table()
     start_balance = balance
     difference = date1 - date2
@@ -30,10 +31,10 @@ def no_reinvest(balance, price, date1, date2, velichina_coupona, coupons, nalog,
     frac = dni / 365
     amount_of_coupons = frac * coupons
     price_increase = (1000 - price) / amount_of_coupons
-    amount_of_bonds = int(balance / (current_coupon + price))
-    print("бумаг куплено", amount_of_bonds)
-    balance -= amount_of_bonds * (price + current_coupon)
-    table.add_row([0, f"{price:.2f}", f"{balance:.2f}", f"{start_balance:.2f}", amount_of_bonds, 0])
+    amount_of_bonds = int(balance / (current_coupon + price + price*comission))
+    balance -= amount_of_bonds * (current_coupon + price + price*comission)
+    table.add_row([0, f"{price:.2f}", f"{balance:.2f}", f"{start_balance:.2f}", amount_of_bonds, comission*price*amount_of_bonds])
+    result_comission += comission*price*amount_of_bonds
     for i in range(1, int(amount_of_coupons) + 2):
         if i == int(amount_of_coupons) + 1:
             price = 1000
@@ -50,6 +51,7 @@ def no_reinvest(balance, price, date1, date2, velichina_coupona, coupons, nalog,
     print("баланс составил", result_of_investment)
     print("доход за все время составит ", (result_of_investment / start_balance - 1) * 100, "%")
     print("процентов годовых", ((result_of_investment / start_balance) ** (1 / frac) - 1) * 100, "%")
+    print("комиссия брокера составила", result_comission)
     print("ВЫЧТЕМ ПОДОХОДНЫЙ НАЛОГ")
     after_nalog = result_of_investment - (result_of_investment - start_balance) * nalog
     print("баланс состаит", after_nalog)
@@ -57,6 +59,7 @@ def no_reinvest(balance, price, date1, date2, velichina_coupona, coupons, nalog,
     print("процентов годовых", ((after_nalog / start_balance) ** (1 / frac) - 1) * 100, "%")
 
 def linear_reinvest(balance, price, date1, date2, velichina_coupona, coupons, nalog, comission):
+    result_comission = 0
     table = create_table()
     start_balance = balance
     difference = date1 - date2
@@ -64,9 +67,10 @@ def linear_reinvest(balance, price, date1, date2, velichina_coupona, coupons, na
     frac = dni / 365
     amount_of_coupons = frac * coupons
     price_increase = (1000 - price) / amount_of_coupons
-    amount_of_bonds = int(balance / (current_coupon + price))
-    balance -= amount_of_bonds * (price + current_coupon)
-    table.add_row([0, f"{price:.2f}", f"{balance:.2f}", f"{start_balance:.2f}", amount_of_bonds, 0])
+    amount_of_bonds = int(balance / (current_coupon + price + price*comission))
+    balance -= amount_of_bonds * (price + current_coupon + price*comission)
+    result_comission += comission * price * amount_of_bonds
+    table.add_row([0, f"{price:.2f}", f"{balance:.2f}", f"{start_balance:.2f}", amount_of_bonds, amount_of_bonds*price*comission])
     for i in range(1, int(amount_of_coupons) + 2):
         if i == int(amount_of_coupons) + 1:
             price = 1000
@@ -75,17 +79,19 @@ def linear_reinvest(balance, price, date1, date2, velichina_coupona, coupons, na
         else:
             price += price_increase
         balance += (velichina_coupona * amount_of_bonds)
-        skolko_dokupim = int(balance / price)
+        skolko_dokupim = int(balance / (price + price*comission))
         amount_of_bonds += skolko_dokupim
-        balance -= (skolko_dokupim * price)
+        balance -= (skolko_dokupim * price * (1+comission))
         estimated_value = price * amount_of_bonds + balance
-        table.add_row([i, f"{price:.2f}", f"{balance:.2f}", f"{estimated_value:.2f}", amount_of_bonds, 0])
+        table.add_row([i, f"{price:.2f}", f"{balance:.2f}", f"{estimated_value:.2f}", amount_of_bonds, skolko_dokupim*price*comission])
+        result_comission+= skolko_dokupim*price*comission
     print_table(table)
     result_of_investment = price * amount_of_bonds + balance
     print("ИТОГИ")
     print("баланс составил", result_of_investment)
     print("доход за все время составит ", (result_of_investment / start_balance - 1) * 100, "%")
     print("процентов годовых", ((result_of_investment / start_balance) ** (1 / frac) - 1) * 100, "%")
+    print("комиссия брокера составила", result_comission)
     print("ВЫЧТЕМ ПОДОХОДНЫЙ НАЛОГ")
     after_nalog = result_of_investment - (result_of_investment - start_balance) * nalog
     print("баланс состаит", after_nalog)
