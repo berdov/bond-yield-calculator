@@ -13,7 +13,7 @@ print = custom_print
 
 def create_table():
     table = PrettyTable()
-    table.field_names = ["Номер купона", "Текущая цена бумаги", "Остаток на счете", "Оценочная стоимость", "Число бумаг"]
+    table.field_names = ["Номер купона", "Текущая цена бумаги", "Остаток на счете", "Оценочная стоимость", "Число бумаг", "Комиссия"]
     table.align = "c"  # Выравнивание текста по центру ячеек
     table.float_format = ".2"  # Устанавливаем точность до 2 знаков после запятой
     return table
@@ -22,7 +22,7 @@ def print_table(table):
     print("\nРезультаты купонов:")
     print(table)
 
-def no_reinvest(balance, price, date1, date2, velichina_coupona, coupons, nalog):
+def no_reinvest(balance, price, date1, date2, velichina_coupona, coupons, nalog, comission):
     table = create_table()
     start_balance = balance
     difference = date1 - date2
@@ -33,6 +33,7 @@ def no_reinvest(balance, price, date1, date2, velichina_coupona, coupons, nalog)
     amount_of_bonds = int(balance / (current_coupon + price))
     print("бумаг куплено", amount_of_bonds)
     balance -= amount_of_bonds * (price + current_coupon)
+    table.add_row([0, f"{price:.2f}", f"{balance:.2f}", f"{start_balance:.2f}", amount_of_bonds, 0])
     for i in range(1, int(amount_of_coupons) + 2):
         if i == int(amount_of_coupons) + 1:
             price = 1000
@@ -42,7 +43,7 @@ def no_reinvest(balance, price, date1, date2, velichina_coupona, coupons, nalog)
             price += price_increase
         balance += (velichina_coupona * amount_of_bonds)
         estimated_value = price * amount_of_bonds + balance
-        table.add_row([i, f"{price:.2f}", f"{balance:.2f}", f"{estimated_value:.2f}", amount_of_bonds])
+        table.add_row([i, f"{price:.2f}", f"{balance:.2f}", f"{estimated_value:.2f}", amount_of_bonds, 0])
     print_table(table)
     result_of_investment = price * amount_of_bonds + balance
     print("ИТОГИ")
@@ -55,7 +56,7 @@ def no_reinvest(balance, price, date1, date2, velichina_coupona, coupons, nalog)
     print("доход за все время составит ", ((after_nalog) / start_balance - 1) * 100, "%")
     print("процентов годовых", ((after_nalog / start_balance) ** (1 / frac) - 1) * 100, "%")
 
-def linear_reinvest(balance, price, date1, date2, velichina_coupona, coupons, nalog):
+def linear_reinvest(balance, price, date1, date2, velichina_coupona, coupons, nalog, comission):
     table = create_table()
     start_balance = balance
     difference = date1 - date2
@@ -64,8 +65,8 @@ def linear_reinvest(balance, price, date1, date2, velichina_coupona, coupons, na
     amount_of_coupons = frac * coupons
     price_increase = (1000 - price) / amount_of_coupons
     amount_of_bonds = int(balance / (current_coupon + price))
-    print("бумаг куплено", amount_of_bonds)
     balance -= amount_of_bonds * (price + current_coupon)
+    table.add_row([0, f"{price:.2f}", f"{balance:.2f}", f"{start_balance:.2f}", amount_of_bonds, 0])
     for i in range(1, int(amount_of_coupons) + 2):
         if i == int(amount_of_coupons) + 1:
             price = 1000
@@ -78,7 +79,7 @@ def linear_reinvest(balance, price, date1, date2, velichina_coupona, coupons, na
         amount_of_bonds += skolko_dokupim
         balance -= (skolko_dokupim * price)
         estimated_value = price * amount_of_bonds + balance
-        table.add_row([i, f"{price:.2f}", f"{balance:.2f}", f"{estimated_value:.2f}", amount_of_bonds])
+        table.add_row([i, f"{price:.2f}", f"{balance:.2f}", f"{estimated_value:.2f}", amount_of_bonds, 0])
     print_table(table)
     result_of_investment = price * amount_of_bonds + balance
     print("ИТОГИ")
@@ -107,14 +108,16 @@ balance = float(input())
 print("введите НДФЛ в процентах")
 nalog = int(input()) / 100
 date2 = datetime.now()
+print("введите комиссию брокера в процентах")
+comission = float(input())/100
 print("купоны реинвестируем? (да/нет/не знаю)")
 what = input()
 if what == "да":
-    linear_reinvest(balance, price, date1, date2, velichina_coupona, coupons, nalog)
+    linear_reinvest(balance, price, date1, date2, velichina_coupona, coupons, nalog, comission)
 elif what == "нет":
-    no_reinvest(balance, price, date1, date2, velichina_coupona, coupons, nalog)
+    no_reinvest(balance, price, date1, date2, velichina_coupona, coupons, nalog, comission)
 elif what == "не знаю":
-    no_reinvest(balance, price, date1, date2, velichina_coupona, coupons, nalog)
+    no_reinvest(balance, price, date1, date2, velichina_coupona, coupons, nalog, comission)
     print("\n\n")
-    linear_reinvest(balance, price, date1, date2, velichina_coupona, coupons, nalog)
+    linear_reinvest(balance, price, date1, date2, velichina_coupona, coupons, nalog, comission)
 print("всё!")
