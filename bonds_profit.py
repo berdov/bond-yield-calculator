@@ -14,8 +14,8 @@ print = custom_print
 def create_table():
     table = PrettyTable()
     table.field_names = ["Номер купона", "Текущая цена бумаги", "Остаток на счете", "Оценочная стоимость", "Число бумаг", "Комиссия"]
-    table.align = "c"  # Выравнивание текста по центру ячеек
-    table.float_format = ".2"  # Устанавливаем точность до 2 знаков после запятой
+    table.align = "c"  
+    table.float_format = ".2"  
     return table
 
 def print_table(table):
@@ -47,16 +47,8 @@ def no_reinvest(balance, price, date1, date2, velichina_coupona, coupons, nalog,
         table.add_row([i, f"{price:.2f}", f"{balance:.2f}", f"{estimated_value:.2f}", amount_of_bonds, 0])
     print_table(table)
     result_of_investment = price * amount_of_bonds + balance
-    print("ИТОГИ")
-    print("баланс составил", result_of_investment)
-    print("доход за все время составит ", (result_of_investment / start_balance - 1) * 100, "%")
-    print("процентов годовых", ((result_of_investment / start_balance) ** (1 / frac) - 1) * 100, "%")
-    print("комиссия брокера составила", result_comission)
-    print("ВЫЧТЕМ ПОДОХОДНЫЙ НАЛОГ")
-    after_nalog = result_of_investment - (result_of_investment - start_balance) * nalog
-    print("баланс состаит", after_nalog)
-    print("доход за все время составит ", ((after_nalog) / start_balance - 1) * 100, "%")
-    print("процентов годовых", ((after_nalog / start_balance) ** (1 / frac) - 1) * 100, "%")
+    printer(result_of_investment, start_balance, frac, result_comission)
+    
 
 def linear_reinvest(balance, price, date1, date2, velichina_coupona, coupons, nalog, comission):
     result_comission = 0
@@ -87,6 +79,11 @@ def linear_reinvest(balance, price, date1, date2, velichina_coupona, coupons, na
         result_comission+= skolko_dokupim*price*comission
     print_table(table)
     result_of_investment = price * amount_of_bonds + balance
+    printer(result_of_investment, start_balance, frac, result_comission)
+    
+    
+
+def printer(result_of_investment, start_balance, frac, result_comission):
     print("ИТОГИ")
     print("баланс составил", result_of_investment)
     print("доход за все время составит ", (result_of_investment / start_balance - 1) * 100, "%")
@@ -98,24 +95,25 @@ def linear_reinvest(balance, price, date1, date2, velichina_coupona, coupons, na
     print("доход за все время составит ", ((after_nalog) / start_balance - 1) * 100, "%")
     print("процентов годовых", ((after_nalog / start_balance) ** (1 / frac) - 1) * 100, "%")
 
-# Основная часть остается без изменений
+
+
 print("сколько стоит бумага сейчас")
-price = float(input())
+price = float(input().replace(",", "."))
 print("накопленный купонный доход")
-current_coupon = float(input())
+current_coupon = float(input().replace(",", "."))
 print("дата погашения формат: DD.MM.YYYY")
 date1 = datetime.strptime(input(), "%d.%m.%Y")
 print("число купонов в год")
 coupons = float(input())
 print("величина купона")
-velichina_coupona = float(input())
+velichina_coupona = float(input().replace(",", "."))
 print("какую сумму будем инвестировать")
-balance = float(input())
+balance = float(input().replace(",", "."))
 print("введите НДФЛ в процентах")
 nalog = int(input()) / 100
 date2 = datetime.now()
 print("введите комиссию брокера в процентах")
-comission = float(input())/100
+comission = float(input().replace(",", "."))/100
 print("купоны реинвестируем? (да/нет/не знаю)")
 what = input()
 if what == "да":
