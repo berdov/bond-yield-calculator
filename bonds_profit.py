@@ -2,10 +2,21 @@ from datetime import datetime, timedelta
 from prettytable import PrettyTable
 import sys
 import os
+import requests
+from requests.exceptions import RequestException
+from calculator import calc
+
+
+def extract_description_field(data, field_name):
+    for row in data['description']['data']:
+        if row[0] == field_name:
+            return row[2]
+    return None
 
 
 if os.path.exists('test.txt'):
-    sys.stdin = open('test.txt', 'r')  
+    sys.stdin = open('test.txt', 'r')
+
 original_print = print
 
 def custom_print(*args, **kwargs):
@@ -16,93 +27,65 @@ def custom_print(*args, **kwargs):
 
 print = custom_print
 
-def create_table():
-    table = PrettyTable()
-    table.field_names = ["Номер купона", "Дата выплаты", "Текущая цена бумаги", "Остаток на счете", "Оценочная стоимость", "Число бумаг", "Комиссия"]
-    table.align = "c"  
-    table.float_format = ".2"  
-    return table
+price = current_coupon = coupons = velichina_coupona = date1 = None
 
-def print_table(table):
-    print("\nРезультаты купонов:")
-    print(table)
+ticker = input("Введите тикер облигации (или нажмите Enter для ручного ввода): ").strip()
 
-def calc(balance, price, date1, date2, velichina_coupona, coupons, nalog, comission, type_of_increase):
-    result_comission = 0
-    start_balance = balance
-    difference = date1 - date2
-    dni = difference.days
-    frac = dni / 365
-    amount_of_coupons = frac * coupons
-    price_increase = (1000 - price) / amount_of_coupons
-    price_multiply = (1000/price)**(1/((amount_of_coupons)+1))
-    amount_of_bonds = int(balance / (current_coupon + price + price*comission))
-    balance -= amount_of_bonds * (current_coupon + price + price*comission)
-    date_of_coupon = date2
-    table = create_table()
-    table.add_row([0, date_of_coupon.strftime("%d %m %Y"), f"{price:.2f}", f"{balance:.2f}", f"{start_balance:.2f}", amount_of_bonds, comission*price*amount_of_bonds])
-    result_comission += comission*price*amount_of_bonds
-    for i in range(1, int(amount_of_coupons) + 2):
-        if type_of_increase == 'л':
-            if i == int(amount_of_coupons) + 1:
-                price = 1000
-                date_of_coupon = date1
-            elif i == 1:
-                price = 1000 - price_increase * int(amount_of_coupons)
-                date_of_coupon = date1 - timedelta(days=int(amount_of_coupons) * 365 / coupons)
-            else:
-                price += price_increase
-                date_of_coupon += timedelta(days=(365 / coupons))
-            
-        else:
-            if i == int(amount_of_coupons) + 1:
-                price = 1000
-                date_of_coupon = date1
-            elif i == 1:
-                price *= price_multiply
-                date_of_coupon = date1 - timedelta(days=int(amount_of_coupons) * 365 / coupons)
-            else:
-                price *= price_multiply
-                date_of_coupon += timedelta(days=(365 / coupons))
-        balance += (velichina_coupona * amount_of_bonds)
-        skolko_dokupim = int(balance / (price + price*comission))
-        amount_of_bonds += skolko_dokupim
-        balance -= (skolko_dokupim * price * (1+comission))
-        estimated_value = price * amount_of_bonds + balance
-        result_comission+= skolko_dokupim*price*comission
-        table.add_row([i, date_of_coupon.strftime("%d %m %Y"), f"{price:.2f}", f"{balance:.2f}", f"{estimated_value:.2f}", amount_of_bonds, skolko_dokupim*price*comission])
-    print_table(table)
-    result_of_investment = price * amount_of_bonds + balance
-    print("ИТОГИ")
-    print("баланс составил", result_of_investment)
-    print("доход за все время составит ", (result_of_investment / start_balance - 1) * 100, "%")
-    print("процентов годовых", ((result_of_investment / start_balance) ** (1 / frac) - 1) * 100, "%")
-    print("комиссия брокера составила", result_comission)
-    print("ВЫЧТЕМ ПОДОХОДНЫЙ НАЛОГ")
-    after_nalog = result_of_investment - (result_of_investment - start_balance) * nalog
-    print("баланс состаит", after_nalog)
-    print("доход за все время составит ", ((after_nalog) / start_balance - 1) * 100, "%")
-    print("процентов годовых", ((after_nalog / start_balance) ** (1 / frac) - 1) * 100, "%")
+if ticker:
+    try:
+        # Получаем основные данные
+        url = f"https://iss.moex.com/iss/securities/{ticker}.json?iss.meta=off"
+        data = requests.get(url, timeout=5).json()
 
+        if not data['description']['data']:
+            raise ValueError("Бумага не найдена")
 
-print("сколько стоит бумага сейчас")
-price = float(input().replace(",", "."))
-print("накопленный купонный доход")
-current_coupon = float(input().replace(",", "."))
-print("дата погашения формат: DD.MM.YYYY")
-date1 = datetime.strptime(input(), "%d.%m.%Y")
-print("число купонов в год")
-coupons = float(input())
-print("величина купона")
-velichina_coupona = float(input().replace(",", "."))
-print("какую сумму будем инвестировать")
-balance = float(input().replace(",", "."))
-print("введите НДФЛ в процентах")
-nalog = int(input()) / 100
-date2 = datetime.now()
-print("введите комиссию брокера в процентах")
-comission = float(input().replace(",", "."))/100
-print("введите способ увеличения цены бумаши: л - линейно, э - экспоненциально")
-type_of_increase = input()
-calc(balance, price, date1, date2, velichina_coupona, coupons, nalog, comission, type_of_increase)
+        date1_str = extract_description_field(data, 'MATDATE')
+        date1 = datetime.strptime(date1_str, "%Y-%m-%d")
+
+        velichina_coupona = float(extract_description_field(data, 'COUPONVALUE') or 0)
+        coupons = float(extract_description_field(data, 'COUPONFREQUENCY') or 0)
+        facevalue = float(extract_description_field(data, 'FACEVALUE') or 1000)
+
+        # Получаем цену и НКД
+        board = None
+        for row in data['boards']['data']:
+            if row[data['boards']['columns'].index('market')] == 'bonds':
+                board = row[data['boards']['columns'].index('boardid')]
+                break
+        if not board:
+            board = "TQCB"
+
+        url2 = f"https://iss.moex.com/iss/engines/stock/markets/bonds/boards/{board}/securities/{ticker}.json?iss.meta=off&iss.only=marketdata,securities&marketdata.columns=LAST&securities.columns=ACCRUEDINT"
+        md = requests.get(url2, timeout=5).json()
+
+        last_price_raw = md['marketdata']['data'][0][0] if md['marketdata']['data'] else None
+        accrued_int_raw = md['securities']['data'][0][0] if md['securities']['data'] else None
+
+        last_price_percent = float(last_price_raw) if last_price_raw else 100
+        accrued_int = float(accrued_int_raw) if accrued_int_raw else 0.0
+
+        price = last_price_percent * facevalue / 100.0
+        current_coupon = accrued_int
+
+        if coupons == 0:
+            raise ValueError("Не удалось определить периодичность купонов")
+
+    except (RequestException, ValueError, KeyError, IndexError) as e:
+        print(f"Ошибка при получении данных по тикеру: {e}")
+        ticker = ""
+
+if not ticker:
+    price = float(input("Сколько стоит бумага сейчас: ").replace(",", "."))
+    current_coupon = float(input("Накопленный купонный доход: ").replace(",", "."))
+    date1 = datetime.strptime(input("Дата погашения (формат: DD.MM.YYYY): "), "%d.%m.%Y")
+    coupons = float(input("Число купонов в год: "))
+    velichina_coupona = float(input("Величина купона: ").replace(",", "."))
+
+balance = float(input("Какую сумму будем инвестировать: ").replace(",", "."))
+nalog = int(input("Введите НДФЛ в процентах: ")) / 100
+comission = float(input("Введите комиссию брокера в процентах: ").replace(",", ".")) / 100
+type_of_increase = input("Введите способ увеличения цены бумаги (л - линейно, э - экспоненциально): ")
+
+calc(balance, price, date1, datetime.now(), velichina_coupona, coupons, nalog, comission, type_of_increase, current_coupon)
 print("всё!")
