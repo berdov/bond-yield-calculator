@@ -27,7 +27,7 @@ def print_table(table):
     print("\nРезультаты купонов:")
     print(table)
 
-def calc(balance, price, date1, date2, velichina_coupona, coupons, nalog, comission):
+def calc(balance, price, date1, date2, velichina_coupona, coupons, nalog, comission, type_of_increase):
     result_comission = 0
     start_balance = balance
     difference = date1 - date2
@@ -35,6 +35,7 @@ def calc(balance, price, date1, date2, velichina_coupona, coupons, nalog, comiss
     frac = dni / 365
     amount_of_coupons = frac * coupons
     price_increase = (1000 - price) / amount_of_coupons
+    price_multiply = (1000/price)**(1/((amount_of_coupons)+1))
     amount_of_bonds = int(balance / (current_coupon + price + price*comission))
     balance -= amount_of_bonds * (current_coupon + price + price*comission)
     date_of_coupon = date2
@@ -42,15 +43,27 @@ def calc(balance, price, date1, date2, velichina_coupona, coupons, nalog, comiss
     table.add_row([0, date_of_coupon.strftime("%d %m %Y"), f"{price:.2f}", f"{balance:.2f}", f"{start_balance:.2f}", amount_of_bonds, comission*price*amount_of_bonds])
     result_comission += comission*price*amount_of_bonds
     for i in range(1, int(amount_of_coupons) + 2):
-        if i == int(amount_of_coupons) + 1:
-            price = 1000
-            date_of_coupon = date1
-        elif i == 1:
-            price = 1000 - price_increase * int(amount_of_coupons)
-            date_of_coupon = date1 - timedelta(days=int(amount_of_coupons) * 365 / coupons)
+        if type_of_increase == 'л':
+            if i == int(amount_of_coupons) + 1:
+                price = 1000
+                date_of_coupon = date1
+            elif i == 1:
+                price = 1000 - price_increase * int(amount_of_coupons)
+                date_of_coupon = date1 - timedelta(days=int(amount_of_coupons) * 365 / coupons)
+            else:
+                price += price_increase
+                date_of_coupon += timedelta(days=(365 / coupons))
+            
         else:
-            price += price_increase
-            date_of_coupon += timedelta(days=(365 / coupons))
+            if i == int(amount_of_coupons) + 1:
+                price = 1000
+                date_of_coupon = date1
+            elif i == 1:
+                price *= price_multiply
+                date_of_coupon = date1 - timedelta(days=int(amount_of_coupons) * 365 / coupons)
+            else:
+                price *= price_multiply
+                date_of_coupon += timedelta(days=(365 / coupons))
         balance += (velichina_coupona * amount_of_bonds)
         skolko_dokupim = int(balance / (price + price*comission))
         amount_of_bonds += skolko_dokupim
@@ -89,5 +102,7 @@ nalog = int(input()) / 100
 date2 = datetime.now()
 print("введите комиссию брокера в процентах")
 comission = float(input().replace(",", "."))/100
-calc(balance, price, date1, date2, velichina_coupona, coupons, nalog, comission)
+print("введите способ увеличения цены бумаши: л - линейно, э - экспоненциально")
+type_of_increase = input()
+calc(balance, price, date1, date2, velichina_coupona, coupons, nalog, comission, type_of_increase)
 print("всё!")
