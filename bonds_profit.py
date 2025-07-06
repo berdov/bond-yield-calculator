@@ -1,6 +1,11 @@
 from datetime import datetime, timedelta
 from prettytable import PrettyTable
+import sys
+import os
 
+
+if os.path.exists('test.txt'):
+    sys.stdin = open('test.txt', 'r')  
 original_print = print
 
 def custom_print(*args, **kwargs):
@@ -22,7 +27,7 @@ def print_table(table):
     print("\nРезультаты купонов:")
     print(table)
 
-def calc(balance, price, date1, date2, velichina_coupona, coupons, nalog, comission, fl):
+def calc(balance, price, date1, date2, velichina_coupona, coupons, nalog, comission):
     result_comission = 0
     start_balance = balance
     difference = date1 - date2
@@ -46,17 +51,12 @@ def calc(balance, price, date1, date2, velichina_coupona, coupons, nalog, comiss
         else:
             price += price_increase
             date_of_coupon += timedelta(days=(365 / coupons))
-        if fl == 0:
-            balance += (velichina_coupona * amount_of_bonds)
-            estimated_value = price * amount_of_bonds + balance
-            skolko_dokupim=0
-        else:
-            balance += (velichina_coupona * amount_of_bonds)
-            skolko_dokupim = int(balance / (price + price*comission))
-            amount_of_bonds += skolko_dokupim
-            balance -= (skolko_dokupim * price * (1+comission))
-            estimated_value = price * amount_of_bonds + balance
-            result_comission+= skolko_dokupim*price*comission
+        balance += (velichina_coupona * amount_of_bonds)
+        skolko_dokupim = int(balance / (price + price*comission))
+        amount_of_bonds += skolko_dokupim
+        balance -= (skolko_dokupim * price * (1+comission))
+        estimated_value = price * amount_of_bonds + balance
+        result_comission+= skolko_dokupim*price*comission
         table.add_row([i, date_of_coupon.strftime("%d %m %Y"), f"{price:.2f}", f"{balance:.2f}", f"{estimated_value:.2f}", amount_of_bonds, skolko_dokupim*price*comission])
     print_table(table)
     result_of_investment = price * amount_of_bonds + balance
@@ -89,16 +89,5 @@ nalog = int(input()) / 100
 date2 = datetime.now()
 print("введите комиссию брокера в процентах")
 comission = float(input().replace(",", "."))/100
-print("купоны реинвестируем? (да/нет/не знаю)")
-what = input()
-if what == "да":
-    calc(balance, price, date1, date2, velichina_coupona, coupons, nalog, comission, 1)
-elif what == "нет":
-    calc(balance, price, date1, date2, velichina_coupona, coupons, nalog, comission, 0)
-elif what == "не знаю":
-    print("случай 1: не реинвестируем")
-    calc(balance, price, date1, date2, velichina_coupona, coupons, nalog, comission, 0)
-    print("\n\n")
-    print("случай 2: реинвестируем")
-    calc(balance, price, date1, date2, velichina_coupona, coupons, nalog, comission, 1)
+calc(balance, price, date1, date2, velichina_coupona, coupons, nalog, comission)
 print("всё!")
