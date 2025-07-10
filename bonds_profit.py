@@ -92,7 +92,7 @@ def get_user_investment_parameters():
     tax_rate = float(input("Введите НДФЛ (%): ").replace(",", ".")) / 100
     commission_rate = float(input("Комиссия брокера (%): ").replace(",", ".")) / 100
     increase_type = input("Тип роста цены (л - линейный, э - экспоненциальный): ").strip().lower()
-    type_of_account = input("Бид счёта: и - ИИC, б - брокерский").strip().lower()
+    type_of_account = input("Вид счёта: иа/иб - ИИC типа а/б, б - брокерский").strip().lower()
     output = input("Экспорт результатов: c - CSV, e - Excel, т - Терминал").strip().lower()
     return total_investment, tax_rate, commission_rate, increase_type, type_of_account, output
 

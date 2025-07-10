@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 from prettytable import PrettyTable
 import pandas as pd
 
@@ -18,7 +18,7 @@ print = custom_print
 def create_table():
     table = PrettyTable()
     table.field_names = ["Номер купона", "Дата выплаты", "КД", "Текущая цена", "Остаток на счете",
-                         "Оценочная стоимость", "Всего бумаг", "Докупили", "Комиссия", "Налог"]
+                         "Оценочная стоимость", "Всего бумаг", "Докупили", "Комиссия", "Налог к уплате", "Уплаченный налог"]
     table.align = "c"
     table.float_format = ".2"
     return table
@@ -69,6 +69,7 @@ def calc(balance, start_price, maturity_date, today, coupon_value, coupons_per_y
         0,
         number_of_bonds,
         start_price * number_of_bonds * commission_rate,
+        0,
         0
     ])
 
@@ -87,18 +88,36 @@ def calc(balance, start_price, maturity_date, today, coupon_value, coupons_per_y
 
     total_commission_paid += start_price * number_of_bonds * commission_rate
     price_schedule = generate_price_schedule(start_price, coupon_dates, increase_type)
-
+    prev_year=today.year
+    tax_to_pay = 0
+    fl_pay_taxes = 0
     for i, (coupon_date, bond_price) in enumerate(zip(coupon_dates, price_schedule), start=1):
         balance += coupon_value * number_of_bonds
-        additional_bonds = int(balance / (bond_price * (1 + commission_rate)))
+        if type_of_account == "иа":
+            tax_to_pay = tax_to_pay + coupon_value * number_of_bonds * tax_rate
+            if coupon_date == coupon_dates[-1]:
+                balance -= tax_to_pay
+                fl_pay_taxes = 1
+        elif type_of_account == "иб":
+            tax_to_pay == 0
+        elif type_of_account == "б":
+            tax_to_pay = tax_to_pay + coupon_value * number_of_bonds * tax_rate
+            if coupon_date.year != prev_year:
+                balance -= tax_to_pay
+                fl_pay_taxes = 1
+            elif coupon_date == coupon_dates[-1]:
+                balance -= tax_to_pay
+                fl_pay_taxes = 1
+            prev_year = coupon_date.year
+        additional_bonds = max(0, int(balance / (bond_price * (1 + commission_rate))))
         number_of_bonds += additional_bonds
         balance -= additional_bonds * bond_price * (1 + commission_rate)
-
         estimated_value = bond_price * number_of_bonds + balance
         commission_paid = additional_bonds * bond_price * commission_rate
-        tax_paid = coupon_value * number_of_bonds * tax_rate
         total_commission_paid += commission_paid
-
+        tax_paid = 0
+        if fl_pay_taxes == 1:
+            tax_paid = tax_to_pay
         row = {
             "Номер купона": i,
             "Дата выплаты": coupon_date.strftime("%d %m %Y"),
@@ -109,8 +128,12 @@ def calc(balance, start_price, maturity_date, today, coupon_value, coupons_per_y
             "Всего бумаг": number_of_bonds,
             "Докупили": additional_bonds,
             "Комиссия": commission_paid,
-            "Налог": tax_paid
+            "Налог к уплате": tax_to_pay,
+            "Уплаченный налог": tax_paid
         }
+        if fl_pay_taxes == 1:
+            tax_to_pay = 0 
+            fl_pay_taxes = 0
 
         data.append(row)
         table.add_row([
@@ -123,7 +146,8 @@ def calc(balance, start_price, maturity_date, today, coupon_value, coupons_per_y
             row["Всего бумаг"],
             row["Докупили"],
             row["Комиссия"],
-            row["Налог"]
+            row["Налог к уплате"],
+            row["Уплаченный налог"]
         ])
 
     final_value = bond_price * number_of_bonds + balance
@@ -134,17 +158,13 @@ def calc(balance, start_price, maturity_date, today, coupon_value, coupons_per_y
 
     # Итоги (включаются в файл)
     summary_rows = [
-        {"Номер купона": "ИТОГИ", "Дата выплаты": "", "КД": "", "Текущая цена": "", "Остаток на счете": "", "Оценочная стоимость": final_value, "Всего бумаг": "", "Докупили": "", "Комиссия": total_commission_paid, "Налог": ""},
-        {"Номер купона": "Доход за всё время", "Оценочная стоимость": (final_value / initial_balance - 1) * 100},
+        {"Номер купона": "Итоговый баланс", "Дата выплаты": "", "КД": "", "Текущая цена": "", "Остаток на счете": "", "Оценочная стоимость": final_value, "Всего бумаг": "", "Докупили": "", "Комиссия": total_commission_paid, "Налог": ""},
+        {"Номер купона": "Доход за всё время в процентах", "Оценочная стоимость": (final_value / initial_balance - 1) * 100},
         {"Номер купона": "Процентов годовых", "Оценочная стоимость": annual_return},
-        {"Номер купона": "После вычета НДФЛ", "Оценочная стоимость": after_tax},
-        {"Номер купона": "Доход после НДФЛ", "Оценочная стоимость": ((after_tax / initial_balance - 1) * 100)},
-        {"Номер купона": "Годовых после НДФЛ", "Оценочная стоимость": after_tax_annual}
     ]
 
     data.extend(summary_rows)
 
-    # Вывод
     if output.lower() == "t" or output.lower() == "т":
         print("\nРезультаты купонов:")
         print(table)
